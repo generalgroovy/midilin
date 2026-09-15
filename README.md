@@ -6,6 +6,40 @@ Use Native Instruments Traktor Kontrol F1 and X1 MK1 as complementary Garuda
 Sway control surfaces for desktop, media, audio, display controls, scripts,
 model parameters and focused-window management.
 
+## Project at a glance
+
+**Author: Michail Sendetskiy · Python · Linux/Sway · hardware integration**
+
+MIDILIN repurposes Traktor controllers as tactile desktop controls: physical
+knobs, faders, buttons, and encoders operate media, display settings, and
+windows. A graphical console makes mappings, device status, and diagnostics
+visible alongside the hardware.
+
+| Component | Purpose |
+| --- | --- |
+| Controller runtime | Maps F1/X1 inputs to configured actions and modifier layers |
+| Graphical console | Displays mappings, monitors input, and exposes backend diagnostics |
+| Platform integration | Connects controller actions to Sway, display tools, and user services |
+| Configuration and tests | Keeps mappings in JSON and checks controller/display behavior |
+
+**Platform:** this repository targets Linux with Sway. The Windows companion is
+[MIDIWIN](https://github.com/generalgroovy/midiwin).
+
+Start with the controller diagram below, inspect the
+[implementation](traktor_controller/) and [tests](tests/), or follow the
+[installation instructions](#install-or-update). Configuration checks and
+read-only monitoring are documented under [Verify](#verify).
+
+For a first checkout, before the installation steps:
+
+```bash
+git clone https://github.com/generalgroovy/midilin.git
+cd midilin
+```
+
+Run the later installation commands from this checkout; replace their example
+directory with the location you chose.
+
 ![Unified physical controller overview](assets/layout-overview.svg)
 
 ## Controller console
