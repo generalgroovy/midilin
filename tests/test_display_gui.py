@@ -33,6 +33,25 @@ class DisplayGuiTests(unittest.TestCase):
             popen.assert_not_called()
             run.assert_not_called()
 
+    def test_color_preview_without_wayland_never_launches_processes(self) -> None:
+        dispatcher = ActionDispatcher(self.config, dry_run=True)
+        with patch.dict(os.environ, {}, clear=True), \
+             patch('subprocess.Popen') as popen, \
+             patch('subprocess.run') as run:
+            self.assertTrue(dispatcher.set_color_temperature_kelvin(4500))
+            self.assertTrue(dispatcher.set_color_temperature_kelvin(6500))
+            popen.assert_not_called()
+            run.assert_not_called()
+
+    def test_active_color_requires_wayland(self) -> None:
+        dispatcher = ActionDispatcher(self.config)
+        with patch.dict(os.environ, {}, clear=True), \
+             patch('subprocess.Popen') as popen, \
+             patch('subprocess.run') as run:
+            self.assertFalse(dispatcher.set_color_temperature_kelvin(4500))
+            popen.assert_not_called()
+            run.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

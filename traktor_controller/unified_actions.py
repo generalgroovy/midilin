@@ -242,7 +242,7 @@ class ActionDispatcher(BaseActionDispatcher):
         method = str(mapping.get("adjustment_method", "wayland"))
         takeover = bool(mapping.get("take_ownership", True))
         reset_at_max = bool(mapping.get("reset_at_max", True))
-        if not os.environ.get("WAYLAND_DISPLAY"):
+        if not self.dry_run and not os.environ.get("WAYLAND_DISPLAY"):
             log("Color temperature requires WAYLAND_DISPLAY in the user service. Run `systemctl --user import-environment WAYLAND_DISPLAY SWAYSOCK XDG_RUNTIME_DIR`.")
             return False
         if takeover:

@@ -1,5 +1,10 @@
 # MIDILIN — Traktor X1/F1 Linux System Controller
 
+Open `midilin-gui` for mappings, monitoring and diagnostics. Use read-only
+monitoring to inspect input before starting the active service. Color-temperature
+dry runs can preview commands without a Wayland session; applying them still
+requires the compositor connection.
+
 Linux/Sway sibling of [MIDIWIN](https://github.com/generalgroovy/midiwin).
 
 Use Native Instruments Traktor Kontrol F1 and X1 MK1 as complementary Garuda
