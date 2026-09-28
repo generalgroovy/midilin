@@ -15,6 +15,7 @@ from typing import Any
 
 from .common import DEFAULT_CONFIG, load_config
 from .cli import validate_config
+from .gui_support import execute_command, mapping_rows
 
 EVENT_RE = re.compile(r"device=(\w+) control=([^ ]+).*kind=([^ ]+).*value=(-?\d+)")
 SERVICE = "traktor-system-controller.service"
@@ -58,7 +59,7 @@ class ControllerCanvas(tk.Canvas):
 
     def control(self, device: str, control: str, box: tuple[float, float, float, float],
                 label: str, oval: bool = False) -> None:
-        mapping = _mapping_index(self.config_data).get((device, control), {})
+        mapping = self.mapping_lookup.get((device, control), {})
         action = str(mapping.get("action", "unmapped"))
         fill = "#292d33" if action != "unmapped" else "#202327"
         item = (self.create_oval if oval else self.create_rectangle)(
@@ -70,6 +71,7 @@ class ControllerCanvas(tk.Canvas):
         self.fills[item] = fill
 
     def redraw(self) -> None:
+        self.mapping_lookup = _mapping_index(self.config_data)
         self.delete("all"); self.items.clear(); self.fills.clear()
         width = max(self.winfo_width(), 920); height = max(self.winfo_height(), 560)
         margin, gap = 24, 28
@@ -131,13 +133,21 @@ class MidiLinGui:
         self.root=root; self.root.title("MIDILIN Controller Console"); self.root.geometry("1180x760")
         self.config_path=config_path.expanduser().resolve(); self.config=load_config(self.config_path)
         self.process: subprocess.Popen[str] | None=None; self.service_was_active=False
-        self.output: queue.Queue[str]=queue.Queue(); self.bright_job=None; self.temp_job=None
+        self.output: queue.Queue=queue.Queue(); self.bright_job=None; self.temp_job=None
+        self.detection="Devices not checked"; self.command_serial=0; self.detection_serial=0
         self.build(); self.root.protocol("WM_DELETE_WINDOW", self.close); self.root.after(80,self.drain)
 
     def build(self) -> None:
         top=ttk.Frame(self.root,padding=8); top.pack(fill="x")
         ttk.Label(top,text="MIDILIN",font=("Sans",16,"bold")).pack(side="left")
         self.status=tk.StringVar(value="Ready"); ttk.Label(top,textvariable=self.status).pack(side="right")
+        setup=ttk.Frame(self.root,padding=(8,0,8,8)); setup.pack(fill="x")
+        self.readiness=tk.StringVar()
+        ttk.Label(setup,textvariable=self.readiness,wraplength=980).pack(anchor="w")
+        steps=ttk.Frame(setup); steps.pack(anchor="w",pady=(5,0))
+        for label,action in [("1 · Check saved profile",lambda:self.run_once(["--validate-config"])),("2 · Detect devices",lambda:self.run_once(["--list-devices"])),("3 · Monitor input",self.start_monitor)]:
+            ttk.Button(steps,text=label,command=action).pack(side="left",padx=(0,6))
+        self.refresh_readiness()
         book=ttk.Notebook(self.root); book.pack(fill="both",expand=True,padx=8,pady=(0,8))
         tabs=[ttk.Frame(book),ttk.Frame(book,padding=12),ttk.Frame(book,padding=8),ttk.Frame(book,padding=8)]
         for tab,name in zip(tabs,("Controller layout","Display controls","Mappings","Monitoring")): book.add(tab,text=name)
@@ -180,21 +190,35 @@ class MidiLinGui:
         parent.columnconfigure(1,weight=1)
 
     def build_mappings(self,parent:ttk.Frame)->None:
-        cols=("device","control","kind","action","layer"); self.tree=ttk.Treeview(parent,columns=cols,show="headings")
-        for name,width in zip(cols,(70,220,80,300,180)): self.tree.heading(name,text=name.title()); self.tree.column(name,width=width,anchor="w")
+        search=ttk.Frame(parent); search.pack(fill="x",pady=(0,6))
+        self.mapping_query=tk.StringVar(); self.mapping_state=tk.StringVar(value="All"); self.mapping_count=tk.StringVar()
+        ttk.Label(search,text="Find mapping").pack(side="left")
+        ttk.Entry(search,textvariable=self.mapping_query).pack(side="left",fill="x",expand=True,padx=6)
+        ttk.Combobox(search,textvariable=self.mapping_state,values=("All","Enabled","Disabled"),state="readonly",width=10).pack(side="left")
+        ttk.Label(search,textvariable=self.mapping_count).pack(side="left",padx=6)
+        cols=("device","control","kind","action","layer","state"); self.tree=ttk.Treeview(parent,columns=cols,show="headings")
+        for name,width in zip(cols,(70,200,80,240,180,80)): self.tree.heading(name,text=name.title()); self.tree.column(name,width=width,anchor="w")
         self.tree.pack(fill="both",expand=True); self.fill_mappings()
+        self.mapping_query.trace_add("write",lambda *_:self.fill_mappings())
+        self.mapping_state.trace_add("write",lambda *_:self.fill_mappings())
         row=ttk.Frame(parent); row.pack(fill="x",pady=6)
         ttk.Button(row,text="Reload",command=self.reload).pack(side="left")
         ttk.Button(row,text="Validate",command=lambda:self.run_once(["--validate-config"])).pack(side="left",padx=6)
         ttk.Button(row,text="Open config folder",command=lambda:subprocess.Popen(["xdg-open",str(self.config_path.parent)])).pack(side="left")
 
     def fill_mappings(self)->None:
+        selected=self.tree.selection()
         for item in self.tree.get_children(): self.tree.delete(item)
-        for m in self.config.get("mappings",[]):
-            if not isinstance(m,dict): continue
-            action=str(m.get("action","")); action += (":"+str(m["slot"])) if m.get("slot") else (":"+str(m["parameter"]) if m.get("parameter") else "")
-            layer=",".join(m.get("requires",[]) or m.get("unless",[]))
-            self.tree.insert("","end",values=(m.get("device"),m.get("control"),m.get("kind"),action,layer))
+        rows=mapping_rows(self.config,self.mapping_query.get(),self.mapping_state.get())
+        for key,values in rows:self.tree.insert("","end",iid=key,values=values)
+        self.mapping_count.set(f"{len(rows)} shown")
+        for key in selected:
+            if self.tree.exists(key):self.tree.selection_add(key)
+
+    def refresh_readiness(self)->None:
+        if not hasattr(self,"readiness"):return
+        enabled=sum(bool(m.get("enabled",True)) for m in self.config.get("mappings",[]) if isinstance(m,dict))
+        self.readiness.set(f"Loaded profile: {self.config_path} · {enabled} enabled mappings · {self.detection}")
 
     def build_monitor(self,parent:ttk.Frame)->None:
         row=ttk.Frame(parent); row.pack(fill="x",pady=(0,6))
@@ -211,37 +235,65 @@ class MidiLinGui:
         return command + ["--config", str(self.config_path)]
 
     def service(self,action:str)->None: self.run_external(["systemctl","--user",action,SERVICE])
-    def service_active(self)->bool: return subprocess.run(["systemctl","--user","is-active","--quiet",SERVICE],check=False).returncode==0
+    def service_active(self)->bool: return subprocess.run(["systemctl","--user","is-active","--quiet",SERVICE],check=False,timeout=5).returncode==0
 
     def start_monitor(self)->None:
-        self.stop_process(restart_service=False); self.service_was_active=self.service_active()
-        if self.service_was_active: subprocess.run(["systemctl","--user","stop",SERVICE],check=False)
-        command=self.command()+["--monitor","--dry-run"]; self.append("$ "+" ".join(command)+"\n")
-        self.process=subprocess.Popen(command,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,bufsize=1,env=os.environ.copy())
-        threading.Thread(target=self.reader,daemon=True).start(); self.status.set("Read-only controller monitor")
+        restore_previous=self.service_was_active
+        try:
+            self.stop_process(restart_service=False); self.service_was_active=restore_previous
+            self.service_was_active=self.service_active() or restore_previous
+            if self.service_was_active: subprocess.run(["systemctl","--user","stop",SERVICE],check=True,timeout=5)
+            command=self.command()+["--monitor","--dry-run"]; self.append("$ "+" ".join(command)+"\n")
+            process=subprocess.Popen(command,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,bufsize=1,env=os.environ.copy())
+        except (OSError,subprocess.SubprocessError) as error:
+            self.status.set("Could not start; use Stop monitor to restore service" if self.service_was_active else "Could not start; see Monitoring"); self.append(f"Could not start: {error}\n"); return
+        self.process=process
+        threading.Thread(target=self.reader,args=(process,),daemon=True).start(); self.status.set("Read-only controller monitor")
 
-    def reader(self)->None:
-        assert self.process and self.process.stdout
-        for line in self.process.stdout: self.output.put(line)
-        self.output.put("[monitor stopped]\n")
+    def reader(self,process:subprocess.Popen[str])->None:
+        try:
+            if process.stdout:
+                for line in process.stdout:self.output.put(("line",process,line))
+            code=process.wait()
+        except (OSError,ValueError) as error:
+            self.output.put(("line",process,f"Read error: {error}\n")); code=-1
+        self.output.put(("stopped",process,code))
 
     def run_once(self,args:list[str])->None: self.run_external(self.command()+args)
     def run_external(self,command:list[str])->None:
+        self.command_serial+=1; token=self.command_serial; self.status.set("Checking…")
+        if "--list-devices" in command:self.detection_serial=token
         def worker()->None:
-            result=subprocess.run(command,text=True,capture_output=True,check=False,env=os.environ.copy())
-            self.output.put("$ "+" ".join(command)+"\n"+(result.stdout or "")+(result.stderr or ""))
+            code,text=execute_command(command)
+            self.output.put(("command",token,command,code,"$ "+" ".join(command)+"\n"+text))
         threading.Thread(target=worker,daemon=True).start()
+
+    def handle_output(self,item:tuple)->None:
+        if item[0]=="command":
+            _,token,command,code,text=item
+            self.append(text); self.append(f"[exit {code if code is not None else 'unavailable'}]\n")
+            if "--list-devices" in command and token==self.detection_serial:
+                self.detection="Devices detected" if code==0 else "Device check failed; see Monitoring"
+                self.refresh_readiness()
+            if token==self.command_serial:self.status.set("Check completed" if code==0 else "Check failed; see Monitoring")
+            return
+        _,process,value=item
+        if process is not self.process:return
+        if item[0]=="stopped":
+            self.process=None; self.status.set(f"Monitor stopped (exit {value})"); self.append(f"[monitor stopped: exit {value}]\n"); return
+        self.append(value); match=EVENT_RE.search(value)
+        if match:self.canvas.flash(match.group(1),match.group(2))
 
     def drain(self)->None:
         try:
-            while True:
-                line=self.output.get_nowait(); self.append(line); match=EVENT_RE.search(line)
-                if match: self.canvas.flash(match.group(1),match.group(2))
+            for _ in range(200):self.handle_output(self.output.get_nowait())
         except queue.Empty: pass
         self.root.after(80,self.drain)
 
     def append(self,text:str)->None:
-        self.log.configure(state="normal"); self.log.insert("end",text); self.log.see("end"); self.log.configure(state="disabled")
+        self.log.configure(state="normal"); self.log.insert("end",text)
+        if int(self.log.index("end-1c").split(".")[0])>2000:self.log.delete("1.0","end-2000l")
+        self.log.see("end"); self.log.configure(state="disabled")
 
     def stop_process(self,restart_service:bool=True)->None:
         if self.process and self.process.poll() is None:
@@ -249,7 +301,10 @@ class MidiLinGui:
             try: self.process.wait(timeout=2)
             except subprocess.TimeoutExpired: self.process.kill()
         self.process=None
-        if restart_service and self.service_was_active: subprocess.run(["systemctl","--user","start",SERVICE],check=False)
+        if restart_service and self.service_was_active:
+            code,text=execute_command(["systemctl","--user","start",SERVICE],timeout=5)
+            if code!=0:
+                self.append(text); self.status.set("Could not restore service; retry Stop monitor"); return
         self.service_was_active=False; self.status.set("Stopped")
 
     def schedule_brightness(self)->None:
@@ -291,6 +346,7 @@ class MidiLinGui:
         for name, value in values.items():
             getattr(self, name).set(value)
         self.canvas.config_data=self.config; self.canvas.redraw(); self.fill_mappings(); self.status.set("Configuration reloaded")
+        self.refresh_readiness()
         return True
 
     def close(self)->None: self.stop_process(); self.root.destroy()
