@@ -61,7 +61,7 @@ Stop with Ctrl+C; restart the service explicitly when finished. Unlike the GUI w
 
 The installed profile is `~/.config/traktor-system-controller/config.json`. Included mappings and other files live alongside it under `defaults/`, `hooks/` and `scripts/`. Back up the whole configuration directory if you customize included files. Model-control state may also be written to the configured state-file path.
 
-Restore a selected backup while the service is stopped, validate it, then restart. Invalid/missing configuration and recursive includes are rejected. Defaults for a checkout are in `config.default.json`; a hardware-free config check is:
+Restore a selected backup while the service is stopped, validate it, then restart. Invalid/missing configuration and recursive includes are rejected. The console's **Reload** also refreshes editable display fields. A failed reload keeps the current view. **Save configuration** rejects brightness minimums outside 0–100% and temperature ranges that do not increase within 1000–25000 K, leaving the saved profile unchanged. Defaults for a checkout are in `config.default.json`; a hardware-free config check is:
 
 ```sh
 python traktor-controller.py --config config.default.json --validate-config

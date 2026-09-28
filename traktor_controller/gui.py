@@ -14,9 +14,30 @@ from tkinter import messagebox, ttk
 from typing import Any
 
 from .common import DEFAULT_CONFIG, load_config
+from .cli import validate_config
 
 EVENT_RE = re.compile(r"device=(\w+) control=([^ ]+).*kind=([^ ]+).*value=(-?\d+)")
 SERVICE = "traktor-system-controller.service"
+
+
+def display_values(config: dict[str, Any]) -> dict[str, Any]:
+    controls = config.get("display_controls", {})
+    bright = controls.get("brightness", {})
+    temp = controls.get("color_temperature", {})
+    values = {
+        "brightness_backend": str(bright.get("backend", "auto")),
+        "brightness_device": str(bright.get("device", "")),
+        "ddc_display": str(bright.get("ddc_display", "")),
+        "min_brightness": int(bright.get("minimum_percent", 1)),
+        "temp_backend": str(temp.get("backend", "auto")),
+        "temp_min": int(temp.get("minimum_kelvin", 2500)),
+        "temp_max": int(temp.get("maximum_kelvin", 6500)),
+    }
+    if not 0 <= values["min_brightness"] <= 100:
+        raise ValueError("Minimum brightness must be between 0 and 100%.")
+    if not 1000 <= values["temp_min"] < values["temp_max"] <= 25000:
+        raise ValueError("Temperature must rise from a minimum of at least 1000 K to a neutral value of at most 25000 K.")
+    return values
 
 
 def _mapping_index(config: dict[str, Any]) -> dict[tuple[str, str], dict[str, Any]]:
@@ -137,9 +158,15 @@ class MidiLinGui:
                 ("Minimum temperature K",self.temp_min,None),("Neutral temperature K",self.temp_max,None)]
         for row,(label,var,values) in enumerate(fields):
             ttk.Label(parent,text=label).grid(row=row,column=0,sticky="w",pady=3)
-            widget=ttk.Combobox(parent,textvariable=var,values=values,state="readonly") if values else (ttk.Spinbox(parent,from_=0,to=25000,textvariable=var) if isinstance(var,tk.IntVar) else ttk.Entry(parent,textvariable=var))
+            if values:
+                widget = ttk.Combobox(parent, textvariable=var, values=values, state="readonly")
+            elif isinstance(var, tk.IntVar):
+                low, high = (0, 100) if var is self.min_brightness else (1000, 25000)
+                widget = ttk.Spinbox(parent, from_=low, to=high, textvariable=var)
+            else:
+                widget = ttk.Entry(parent, textvariable=var)
             widget.grid(row=row,column=1,sticky="ew",pady=3)
-        ttk.Button(parent,text="Save",command=self.save_settings).grid(row=8,column=0,pady=10,sticky="w")
+        ttk.Button(parent,text="Save configuration",command=self.save_settings).grid(row=8,column=0,pady=10,sticky="w")
         ttk.Button(parent,text="Open config",command=lambda:subprocess.Popen(["xdg-open",str(self.config_path)])).grid(row=8,column=1,pady=10,sticky="w")
         ttk.Separator(parent).grid(row=9,column=0,columnspan=3,sticky="ew",pady=10)
         self.bright_test=tk.IntVar(value=50); self.temp_test=tk.IntVar(value=4500)
@@ -240,11 +267,31 @@ class MidiLinGui:
             raw=json.loads(self.config_path.read_text(encoding="utf-8")); display=raw.setdefault("display_controls",{})
             display.setdefault("brightness",{}).update({"backend":self.brightness_backend.get(),"device":self.brightness_device.get().strip(),"ddc_display":self.ddc_display.get().strip(),"minimum_percent":int(self.min_brightness.get())})
             display.setdefault("color_temperature",{}).update({"backend":self.temp_backend.get(),"minimum_kelvin":int(self.temp_min.get()),"maximum_kelvin":int(self.temp_max.get()),"take_ownership":True,"reset_at_max":True})
-            self.config_path.write_text(json.dumps(raw,indent=2)+"\n",encoding="utf-8"); self.reload(); self.status.set("Display configuration saved")
-        except Exception as exc: messagebox.showerror("MIDILIN",str(exc))
+            display_values(raw)
+            candidate = load_config(self.config_path)
+            errors = validate_config(candidate)
+            if errors:
+                raise ValueError("\n".join(errors))
+            self.config_path.write_text(json.dumps(raw,indent=2)+"\n",encoding="utf-8")
+            if self.reload():
+                self.status.set("Display configuration saved")
+        except (Exception, SystemExit) as exc: messagebox.showerror("MIDILIN",str(exc))
 
-    def reload(self)->None:
-        self.config=load_config(self.config_path); self.canvas.config_data=self.config; self.canvas.redraw(); self.fill_mappings(); self.status.set("Configuration reloaded")
+    def reload(self)->bool:
+        try:
+            candidate = load_config(self.config_path)
+            errors = validate_config(candidate)
+            if errors:
+                raise ValueError("\n".join(errors))
+            values = display_values(candidate)
+        except (OSError, ValueError, TypeError, AttributeError, SystemExit) as error:
+            messagebox.showerror("Could not reload configuration", str(error))
+            return False
+        self.config = candidate
+        for name, value in values.items():
+            getattr(self, name).set(value)
+        self.canvas.config_data=self.config; self.canvas.redraw(); self.fill_mappings(); self.status.set("Configuration reloaded")
+        return True
 
     def close(self)->None: self.stop_process(); self.root.destroy()
 
