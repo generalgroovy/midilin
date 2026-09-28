@@ -1,173 +1,101 @@
-# MIDILIN — Traktor X1/F1 Linux System Controller
+# MIDILIN
 
-Open `midilin-gui` for mappings, monitoring and diagnostics. Use read-only
-monitoring to inspect input before starting the active service. Color-temperature
-dry runs can preview commands without a Wayland session; applying them still
-requires the compositor connection.
+Use Traktor Kontrol F1 and X1 MK1 controls for Linux/Sway media, audio, display and window actions. A Tk console shows mappings, input activity and diagnostics. [MIDIWIN](https://github.com/generalgroovy/midiwin) is the Windows companion.
 
-Linux/Sway sibling of [MIDIWIN](https://github.com/generalgroovy/midiwin).
+![Controller layout](assets/layout-overview.svg)
 
-Use Native Instruments Traktor Kontrol F1 and X1 MK1 as complementary Garuda
-Sway control surfaces for desktop, media, audio, display controls, scripts,
-model parameters and focused-window management.
+## Install on Garuda/Arch with Sway
 
-## Project at a glance
+The installer uses `pacman`, installs desktop/hardware tools and udev rules, and enables a systemd user service. It is not a distribution-independent installer.
 
-**Author: Michail Sendetskiy · Python · Linux/Sway · hardware integration**
-
-MIDILIN repurposes Traktor controllers as tactile desktop controls: physical
-knobs, faders, buttons, and encoders operate media, display settings, and
-windows. A graphical console makes mappings, device status, and diagnostics
-visible alongside the hardware.
-
-| Component | Purpose |
-| --- | --- |
-| Controller runtime | Maps F1/X1 inputs to configured actions and modifier layers |
-| Graphical console | Displays mappings, monitors input, and exposes backend diagnostics |
-| Platform integration | Connects controller actions to Sway, display tools, and user services |
-| Configuration and tests | Keeps mappings in JSON and checks controller/display behavior |
-
-**Platform:** this repository targets Linux with Sway. The Windows companion is
-[MIDIWIN](https://github.com/generalgroovy/midiwin).
-
-Start with the controller diagram below, inspect the
-[implementation](traktor_controller/) and [tests](tests/), or follow the
-[installation instructions](#install-or-update). Configuration checks and
-read-only monitoring are documented under [Verify](#verify).
-
-For a first checkout, before the installation steps:
-
-```bash
+```sh
 git clone https://github.com/generalgroovy/midilin.git
 cd midilin
-```
-
-Run the later installation commands from this checkout; replace their example
-directory with the location you chose.
-
-![Unified physical controller overview](assets/layout-overview.svg)
-
-## Controller console
-
-The GUI provides:
-
-- a representative front-panel layout for the F1 and X1;
-- live control highlighting during read-only monitoring;
-- brightness and blue-light backend configuration;
-- live brightness and color-temperature testing;
-- mapping and modifier-layer overview;
-- device detection, configuration validation and backend diagnostics;
-- safe service stop/start/restart and journal inspection.
-
-After installation, open **MIDILIN Controller Console** from the application
-launcher or run:
-
-```fish
+bash ./install.sh
+systemctl --user import-environment WAYLAND_DISPLAY SWAYSOCK XDG_CURRENT_DESKTOP XDG_RUNTIME_DIR
 midilin-gui
 ```
 
-## Install or update
+Existing `config.json` is kept. For an update, use `git pull --ff-only`, then run the installer again. `bash ./install.sh --reset-config` deliberately replaces the profile with defaults after making a timestamped backup; it is not needed for an ordinary update.
 
-```fish
-cd ~/Projects/midilin
-git pull --ff-only
-sudo -v
-bash ./install.sh --reset-config
-```
+Installation refreshes the shipped `defaults/` files even when `config.json` is kept. Before updating, back up the whole configuration directory if you edited those included mappings. Keep custom includes outside `defaults/` to avoid overwriting them on future installs.
 
-The reset preserves the existing configuration with a timestamped backup and
-installs schema 5 display settings. Then import the Sway environment and restart:
+After reviewing mappings, reconnect the controllers if newly installed rules require it, then start active control with:
 
-```fish
-systemctl --user import-environment \
-    WAYLAND_DISPLAY \
-    SWAYSOCK \
-    XDG_CURRENT_DESKTOP \
-    XDG_RUNTIME_DIR
-
+```sh
 systemctl --user restart traktor-system-controller.service
 ```
 
-## Repaired brightness behavior
+## Use the console
 
-F1 Knob 4 maps to `brightness_absolute`.
+1. **Mappings** shows actions and modifier layers. **Validate** checks the selected configuration.
+2. **Monitoring → Detect devices** shows available controllers. **Read-only monitor** temporarily stops an active service and displays input without applying mapped actions.
+3. **Stop monitor**, or closing the console, resumes the service only if it was active when monitoring began. **Stop service** is the explicit control for leaving the background service stopped.
+4. **Display controls** configures brightness and color-temperature backends. The test sliders apply live changes. Save changes to the profile, then restart the service to reload them.
 
-- `backend=backlight` uses `brightnessctl --class=backlight` for laptop panels.
-- `backend=ddc` uses `ddcutil setvcp 10` for DDC/CI monitors.
-- `backend=auto` attempts both and reports exact failures rather than suppressing
-  stderr.
-- A specific brightnessctl device or ddcutil display number can be selected in
-  the GUI.
+Use a custom profile with `midilin-gui --config /path/to/config.json`. GUI diagnostics, monitoring and display commands use that resolved path. The **service controls still manage the installed default service**, whose profile is configured by its unit file; opening a custom GUI profile does not change the service definition.
 
-```fish
-traktor-system-controller --diagnose-display
-traktor-system-controller --set-brightness 50
-```
+## Inspect and preview
 
-## Repaired blue-light behavior
-
-F1 Fader 3 maps to `color_temperature_absolute`.
-
-- `backend=auto` tries Wlsunset first and Gammastep second.
-- Wlsunset is started as a persistent wlroots gamma-control process.
-- Gammastep uses the explicit Wayland adjustment method and clears stale gamma
-  ramps before applying a temperature.
-- Existing user-owned Wlsunset/Gammastep processes are stopped before a new value
-  is applied.
-- The maximum endpoint resets to neutral 6500 K.
-- Missing `WAYLAND_DISPLAY`, compositor gamma support and command failures are
-  shown in the service journal and GUI diagnostics.
-
-```fish
-traktor-system-controller --set-temperature 4500
-journalctl --user -u traktor-system-controller.service -n 150 --no-pager
-```
-
-## Default highlights
-
-- F1 Knob 3: controller-light brightness
-- F1 Knob 4: screen brightness
-- F1 Fader 3: blue-light/color temperature
-- F1 Reverse: close focused Sway window
-- F1 Shift knobs/faders: model parameters
-- X1 FX knobs: position, size, opacity, borders, gaps and output
-- X1 Browse/Loop encoders: move and resize focused windows
-- X1 HOTCUE layer: monitoring and maintenance
-
-## Verify
-
-```fish
+```sh
 traktor-system-controller --validate-config
 traktor-system-controller --show-layout
 traktor-system-controller --list-devices
 traktor-system-controller --diagnose-display
+traktor-system-controller --dry-run --set-brightness 50
+traktor-system-controller --dry-run --set-temperature 4500
 ```
 
-Read-only controller monitoring is available directly in the GUI. From the
-terminal:
+Display dry runs print planned commands without launching display tools and do not need a Wayland session. Remove `--dry-run` to apply a value. Active color-temperature changes require `WAYLAND_DISPLAY` and compositor gamma-control support.
 
-```fish
+For terminal input monitoring:
+
+```sh
 systemctl --user stop traktor-system-controller.service
 traktor-system-controller --monitor --dry-run
 ```
 
-Stop with `Ctrl+C`, then restart the service.
+Stop with Ctrl+C; restart the service explicitly when finished. Unlike the GUI workflow, this terminal sequence does not automatically restore it.
 
-## Configuration
+## Configuration and recovery
 
-```text
-~/.config/traktor-system-controller/config.json
+The installed profile is `~/.config/traktor-system-controller/config.json`. Included mappings and other files live alongside it under `defaults/`, `hooks/` and `scripts/`. Back up the whole configuration directory if you customize included files. Model-control state may also be written to the configured state-file path.
+
+Restore a selected backup while the service is stopped, validate it, then restart. Invalid/missing configuration and recursive includes are rejected. Defaults for a checkout are in `config.default.json`; a hardware-free config check is:
+
+```sh
+python traktor-controller.py --config config.default.json --validate-config
 ```
 
-The `display_controls` section selects brightness and color-temperature
-backends. Mapping definitions remain in `defaults/f1.json` and
-`defaults/x1.json`.
+## Display backends and controls
 
-## Related project
+| Control/backend | Behavior |
+| --- | --- |
+| F1 Knob 4 | Absolute screen brightness |
+| `backlight` | Uses `brightnessctl --class=backlight` |
+| `ddc` | Uses `ddcutil setvcp 10` for DDC/CI displays |
+| Brightness `auto` | Attempts available backends and reports failures |
+| F1 Fader 3 | Color temperature; default maximum resets to neutral |
+| Color `auto` | Tries Wlsunset, then Gammastep |
+| F1 Reverse | Closes the focused Sway window |
+| X1 Browse / Loop encoders | Move / resize the focused window |
 
-- Linux/Sway: **MIDILIN** — this repository
-- Windows: **[MIDIWIN](https://github.com/generalgroovy/midiwin)**
+Color-temperature ownership can stop the user's existing Wlsunset/Gammastep processes before applying a new value. Inspect `display_controls` if another application already manages display color. Read the journal for backend errors:
 
-## License
+```sh
+journalctl --user -u traktor-system-controller.service -n 150 --no-pager
+```
 
-MIT
+## Development and limits
+
+Python and Tk are supplied by the target distribution. Hardware access and desktop actions additionally require the packages installed by `install.sh`.
+
+```sh
+python -m unittest discover -s tests -v
+python -m py_compile traktor-controller.py traktor-system-controller.py traktor_controller/*.py
+bash -n install.sh helpers/system-actions examples/model-controls-updated
+```
+
+CI checks configuration, Python, tests, shell and SVG assets. Mocked tests establish routing and preview behavior; they do not establish Linux/Sway integration, physical controller input or display response on this Windows development host. [Source](traktor_controller/) · [Tests](tests/)
+
+MIT license.

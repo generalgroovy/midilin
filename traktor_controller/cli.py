@@ -150,7 +150,7 @@ def main() -> int:
 
     if args.gui:
         from .gui import main as gui_main
-        return gui_main()
+        return gui_main(config_path=args.config)
 
     config = load_config(args.config)
     errors = validate_config(config)
@@ -164,7 +164,7 @@ def main() -> int:
     if errors:
         raise SystemExit("Invalid configuration:\n- " + "\n- ".join(errors))
 
-    dispatcher = ActionDispatcher(config)
+    dispatcher = ActionDispatcher(config, dry_run=args.dry_run)
     if args.set_brightness is not None:
         return 0 if dispatcher.set_brightness_percent(args.set_brightness) else 1
     if args.set_temperature is not None:

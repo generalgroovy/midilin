@@ -108,7 +108,7 @@ class ControllerCanvas(tk.Canvas):
 class MidiLinGui:
     def __init__(self, root: tk.Tk, config_path: Path = DEFAULT_CONFIG):
         self.root=root; self.root.title("MIDILIN Controller Console"); self.root.geometry("1180x760")
-        self.config_path=config_path.expanduser(); self.config=load_config(self.config_path)
+        self.config_path=config_path.expanduser().resolve(); self.config=load_config(self.config_path)
         self.process: subprocess.Popen[str] | None=None; self.service_was_active=False
         self.output: queue.Queue[str]=queue.Queue(); self.bright_job=None; self.temp_job=None
         self.build(); self.root.protocol("WM_DELETE_WINDOW", self.close); self.root.after(80,self.drain)
@@ -180,7 +180,8 @@ class MidiLinGui:
 
     def command(self)->list[str]:
         installed=shutil.which("traktor-system-controller")
-        return [installed] if installed else [sys.executable,str(Path(__file__).resolve().parents[1]/"traktor-controller.py")]
+        command = [installed] if installed else [sys.executable,str(Path(__file__).resolve().parents[1]/"traktor-controller.py")]
+        return command + ["--config", str(self.config_path)]
 
     def service(self,action:str)->None: self.run_external(["systemctl","--user",action,SERVICE])
     def service_active(self)->bool: return subprocess.run(["systemctl","--user","is-active","--quiet",SERVICE],check=False).returncode==0
@@ -248,8 +249,8 @@ class MidiLinGui:
     def close(self)->None: self.stop_process(); self.root.destroy()
 
 
-def main()->int:
-    root=tk.Tk(); MidiLinGui(root); root.mainloop(); return 0
+def main(config_path: Path = DEFAULT_CONFIG)->int:
+    root=tk.Tk(); MidiLinGui(root, config_path); root.mainloop(); return 0
 
 
 if __name__=="__main__": raise SystemExit(main())
