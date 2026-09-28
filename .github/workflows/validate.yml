@@ -28,7 +28,8 @@ jobs:
       - name: Validate shell
         run: bash -n install.sh helpers/system-actions examples/model-controls-updated
       - name: Validate SVG assets
-        run: python - <<'PY'
+        run: |
+          python - <<'PY'
           import xml.etree.ElementTree as ET
           from pathlib import Path
           for path in Path('assets').glob('*.svg'):
