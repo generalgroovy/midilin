@@ -2,6 +2,14 @@
 
 Use Traktor Kontrol F1 and X1 MK1 controls for Linux/Sway media, audio, display and window actions. A Tk console shows mappings, input activity and diagnostics. [MIDIWIN](https://github.com/generalgroovy/midiwin) is the Windows companion.
 
+## Engineering overview
+
+- **Input mapping:** configurable controller actions and modifier layers connect Traktor hardware to Linux/Sway desktop functions.
+- **Desktop integration:** media, display and window controls use explicit operating-system backends, with a systemd user service for background operation.
+- **Operational visibility:** the Tk console provides mapping inspection, configuration validation, read-only monitoring and controlled service handover.
+
+[Project overview](https://generalgroovy.web.app/apps/midilin-midiwin/) · [Python implementation](traktor_controller/) · [Tests](tests/)
+
 ![Controller layout](assets/layout-overview.svg)
 
 ## Install on Garuda/Arch with Sway
