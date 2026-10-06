@@ -1,0 +1,16 @@
+{
+  "platform": "linux",
+  "tk": "8.6.14",
+  "checks": [
+    "mapping search and stable indices",
+    "layered preview",
+    "full script details",
+    "invalid event recovery",
+    "visible inspector layout",
+    "empty search recovery",
+    "cancel reload and close",
+    "save and discard reload",
+    "invalid draft preserves profile",
+    "no subprocess operations"
+  ]
+}

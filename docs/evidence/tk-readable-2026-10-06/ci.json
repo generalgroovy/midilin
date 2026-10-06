@@ -1,0 +1,9 @@
+{
+  "source_revision": "9d9c5543df12cc5528104c987d2aa311a37f6bc8",
+  "workflow_run": "https://github.com/generalgroovy/midilin/actions/runs/37541538312",
+  "conclusion": "success",
+  "test_count": 39,
+  "screenshots_visually_reviewed": true,
+  "physical_hardware": "NOT_RUN",
+  "active_runtime": "NOT_RUN"
+}
