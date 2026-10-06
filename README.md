@@ -40,6 +40,10 @@ The setup strip shows the loaded profile, enabled mapping count and last device-
 
 In **Mappings**, search by device, control, action, layer or state; filter Enabled/Disabled. Layer text distinguishes `requires` from `unless`. No matching rows reports **0 shown**; clearing the search restores the list. Search does not edit the profile.
 
+Select a row and choose **Inspect / try event** (or press Enter). The inspector shows the complete mapping, referenced script/model definition where present, and an offline routing rehearsal. Choose an event and enter held controls such as `f1.shift`; **Try event** explains which mappings are eligible and why others are blocked. Multiple eligible mappings are shown in configuration order. Search also finds numeric parameters and profile fields; the table scrolls in both directions.
+
+The inspector uses a snapshot of the loaded profile. Reopen it after reloading to inspect new configuration. It never opens controllers or runs mapped commands; it does not simulate action values, throttling, timing or hardware response. Linux aliases and the chosen profile are respected. Linux release mappings see a held control before it is released.
+
 One-off diagnostics report their exit code, time out after 20 seconds, and put details in Monitoring. Monitor startup service checks time out after 5 seconds. The log retains the latest 2,000 lines; restarting monitoring discards late output from the old child.
 
 ## Use the console
@@ -74,6 +78,9 @@ traktor-system-controller --monitor --dry-run
 Stop with Ctrl+C; restart the service explicitly when finished. Unlike the GUI workflow, this terminal sequence does not automatically restore it.
 
 ## Configuration and recovery
+
+Unsaved display changes are marked in the settings tab. Reload and close offer **Save / Discard / Cancel**; Cancel keeps both the draft and the current monitor. An invalid or failed save keeps the console open. Saving replaces a fully written profile atomically and preserves configuration fields outside the editor.
+
 
 The installed profile is `~/.config/traktor-system-controller/config.json`. Included mappings and other files live alongside it under `defaults/`, `hooks/` and `scripts/`. Back up the whole configuration directory if you customize included files. Model-control state may also be written to the configured state-file path.
 

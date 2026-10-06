@@ -3,7 +3,8 @@ from __future__ import annotations
 import time
 from typing import Any
 
-from .common import ControlEvent, X1_DEFAULT_ALIASES, log
+from .common import ControlEvent, log
+from .mapping_rules import control_aliases, layer_reasons, profile_matches, state_key
 from .unified_actions import ActionDispatcher
 
 
@@ -20,14 +21,7 @@ class EventRouter:
         self.last_dispatch: dict[tuple[str, str, str], float] = {}
         self.held: set[tuple[str, str]] = set()
 
-        self.aliases = {"x1": dict(X1_DEFAULT_ALIASES), "f1": {}}
-        configured = config.get("control_aliases", {})
-        if isinstance(configured, dict):
-            for device, aliases in configured.items():
-                if isinstance(aliases, dict):
-                    self.aliases.setdefault(str(device), {}).update(
-                        {str(raw): str(logical) for raw, logical in aliases.items()}
-                    )
+        self.aliases = control_aliases(config)
 
         for mapping in config.get("mappings", []):
             if not isinstance(mapping, dict) or not bool(mapping.get("enabled", True)):
@@ -38,30 +32,13 @@ class EventRouter:
             self.mappings.setdefault(key, []).append(mapping)
 
     def _profile_matches(self, mapping: dict[str, Any]) -> bool:
-        value = mapping.get("profile", mapping.get("profiles"))
-        if value is None:
-            return True
-        if isinstance(value, str):
-            return value == self.profile
-        return isinstance(value, list) and self.profile in {str(item) for item in value}
+        return profile_matches(mapping, self.profile)
 
     def _state_key(self, token: str, event: ControlEvent) -> tuple[str, str]:
-        token = token.strip()
-        for separator in (".", ":"):
-            if separator in token:
-                device, control = token.split(separator, 1)
-                return device, control
-        return event.device, token
+        return state_key(token, event.device)
 
     def _conditions_match(self, mapping: dict[str, Any], event: ControlEvent) -> bool:
-        requires = mapping.get("requires", [])
-        unless = mapping.get("unless", [])
-        requires = [requires] if isinstance(requires, str) else requires
-        unless = [unless] if isinstance(unless, str) else unless
-        return (
-            all(self._state_key(str(token), event) in self.held for token in requires)
-            and all(self._state_key(str(token), event) not in self.held for token in unless)
-        )
+        return not layer_reasons(mapping, event.device, self.held)
 
     def _normalize(self, event: Any) -> ControlEvent:
         raw = str(event.control)

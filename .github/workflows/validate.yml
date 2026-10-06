@@ -35,3 +35,16 @@ jobs:
           for path in Path('assets').glob('*.svg'):
               ET.parse(path)
           PY
+      - name: Install Tk workflow requirements
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y xvfb python3-tk
+          python -m pip install pillow
+      - name: Exercise real Tk workflow without hardware
+        run: xvfb-run -a -s "-screen 0 1280x900x24" python tests/tk_workflow.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: MIDILIN-tk-quality
+          path: artifacts/tk-quality
+          if-no-files-found: warn

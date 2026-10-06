@@ -62,5 +62,14 @@ class SettingsTests(unittest.TestCase):
                 self.view.canvas.redraw.assert_not_called()
                 error.assert_called_once()
 
+    def test_save_preserves_custom_temperature_ownership_flags(self):
+        self.data['display_controls']['color_temperature'].update(take_ownership=False, reset_at_max=False)
+        self.path.write_text(json.dumps(self.data), encoding='utf-8')
+        self.view.min_brightness.set(7)
+        self.assertTrue(self.view.save_settings())
+        saved = load_config(self.path)['display_controls']['color_temperature']
+        self.assertFalse(saved['take_ownership'])
+        self.assertFalse(saved['reset_at_max'])
+
 
 if __name__ == '__main__': unittest.main()

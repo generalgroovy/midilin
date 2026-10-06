@@ -9,6 +9,7 @@ from typing import Any
 
 from .common import BUILTIN_ACTIONS, DEFAULT_CONFIG, load_config
 from .router import EventRouter
+from .mapping_rules import tokens
 from .unified_actions import ActionDispatcher
 
 
@@ -62,6 +63,11 @@ def validate_config(config: dict[str, Any]) -> list[str]:
         for key in ("device", "control", "kind", "action"):
             if key not in mapping:
                 errors.append(f"{prefix} missing {key}")
+        for key in ("requires", "unless"):
+            try:
+                tokens(mapping.get(key, []))
+            except ValueError:
+                errors.append(f"{prefix} {key} must be a name or an array of non-empty names")
         if "action" in mapping and str(mapping["action"]) not in known_actions:
             errors.append(f"{prefix} references unknown action {mapping['action']!r}")
         if mapping.get("kind") not in {"press", "release", "relative", "absolute", None}:
