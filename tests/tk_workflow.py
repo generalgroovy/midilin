@@ -43,6 +43,12 @@ def run():
                 assert "Eligible" in inspector.result.get("1.0", "end")
                 selected = view.config["mappings"][int(layered)]
                 assert str(selected["slot"]) in inspector.details.get("1.0", "end")
+                assert "Control: grid_1" in inspector.details.get("1.0", "end")
+                inspector.raw.set(True)
+                inspector.show_details()
+                assert '"control": "grid_1"' in inspector.details.get("1.0", "end")
+                inspector.raw.set(False)
+                inspector.show_details()
                 inspector.kind.set("not-an-event")
                 inspector.try_button.invoke()
                 assert "Could not preview" in inspector.result.get("1.0", "end")

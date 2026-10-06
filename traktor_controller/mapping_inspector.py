@@ -11,8 +11,18 @@ from typing import Any
 from .mapping_rules import SUPPORTS_PROFILES, preview_event
 
 
-def mapping_details(config: dict[str, Any], mapping: dict[str, Any]) -> str:
-    sections = ["Selected mapping\n" + json.dumps(mapping, ensure_ascii=False, indent=2)]
+def mapping_details(config: dict[str, Any], mapping: dict[str, Any], raw: bool = False) -> str:
+    def describe(value: Any) -> str:
+        if raw or not isinstance(value, dict):
+            return json.dumps(value, ensure_ascii=False, indent=2)
+        labels = {"kind": "Event", "requires": "Hold", "unless": "Release", "enabled": "Enabled"}
+        lines = []
+        for key, item in value.items():
+            label = labels.get(key, key.replace("_", " ").capitalize())
+            text = item if isinstance(item, str) else json.dumps(item, ensure_ascii=False)
+            lines.append(f"{label}: {text}")
+        return "\n".join(lines)
+    sections = ["Selected mapping\n" + describe(mapping)]
     model = config.get("model_controls", {})
     parameters = model.get("parameters", {}) if isinstance(model, dict) else {}
     references = [("Action definition", config.get("actions", {}), mapping.get("action")),
@@ -20,7 +30,7 @@ def mapping_details(config: dict[str, Any], mapping: dict[str, Any]) -> str:
                   ("Model parameter", parameters, mapping.get("parameter"))]
     for label, container, key in references:
         if isinstance(container, dict) and isinstance(key, str) and key in container:
-            sections.append(label + "\n" + json.dumps(container[key], ensure_ascii=False, indent=2))
+            sections.append(label + "\n" + describe(container[key]))
     return "\n\n".join(sections)
 
 
@@ -52,10 +62,15 @@ class MappingInspector(tk.Toplevel):
         self.minsize(580, 480)
         self.config_snapshot = copy.deepcopy(config)
         mapping = self.config_snapshot["mappings"][index]
+        self.mapping = mapping
+        self.raw = tk.BooleanVar(value=False)
         self.columnconfigure(0, weight=1)
         self.rowconfigure(1, weight=1)
         self.rowconfigure(4, weight=1)
-        ttk.Label(self, text="Review a mapping, then try its routing without a controller.", padding=10).grid(sticky="w")
+        heading = ttk.Frame(self, padding=10)
+        heading.grid(sticky="ew")
+        ttk.Label(heading, text="Inspect, then try its routing without a controller.").pack(side="left")
+        ttk.Checkbutton(heading, text="Show JSON", variable=self.raw, command=self.show_details).pack(side="right")
         self.details = ScrolledText(self, height=9, wrap="word", font="TkFixedFont")
         self.details.grid(row=1, column=0, sticky="nsew", padx=10)
         self._write(self.details, mapping_details(self.config_snapshot, mapping))
@@ -96,6 +111,9 @@ class MappingInspector(tk.Toplevel):
         widget.delete("1.0", "end")
         widget.insert("1.0", text)
         widget.configure(state="disabled")
+
+    def show_details(self) -> None:
+        self._write(self.details, mapping_details(self.config_snapshot, self.mapping, self.raw.get()))
 
     def preview(self) -> None:
         try:
