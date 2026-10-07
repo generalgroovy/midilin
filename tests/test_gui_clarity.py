@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import Mock, patch
-from traktor_controller.gui import MidiLinGui
+from traktor_controller.gui import MidiLinGui, SERVICE
 
 
 class ClarityTests(unittest.TestCase):
@@ -56,3 +56,31 @@ class ClarityTests(unittest.TestCase):
         view.mapping_query.set.assert_called_once_with("")
         view.mapping_state.set.assert_called_once_with("All")
         view.mapping_search.focus_set.assert_called_once()
+
+    def test_pending_service_result_does_not_replace_new_monitor_state(self):
+        view = self.view()
+        view.command_serial = 0
+        view.status = Mock()
+        view.session_status = Mock()
+        view.refresh_readiness = Mock()
+        view.append = Mock()
+        with patch("traktor_controller.gui.threading.Thread"):
+            view.run_external(["systemctl", "--user", "start", SERVICE])
+        token = view.command_serial
+        view.set_session_status("Read-only input running · mapped actions off")
+        view.session_status.set.reset_mock()
+        view.handle_output(("command", token, ["systemctl", "--user", "start", SERVICE], 0, "Started"))
+        view.session_status.set.assert_not_called()
+        view.append.assert_called()  # Outcome is still available in the diagnostic log.
+
+    def test_current_service_result_can_update_its_own_session_state(self):
+        view = self.view()
+        view.command_serial = 0
+        view.status = Mock()
+        view.session_status = Mock()
+        view.refresh_readiness = Mock()
+        view.append = Mock()
+        with patch("traktor_controller.gui.threading.Thread"):
+            view.run_external(["systemctl", "--user", "stop", SERVICE])
+        view.handle_output(("command", view.command_serial, ["systemctl", "--user", "stop", SERVICE], 0, "Stopped"))
+        view.session_status.set.assert_called_once_with("Service request completed · see log")

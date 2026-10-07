@@ -227,6 +227,7 @@ class MidiLinGui:
             self.start_monitor()
 
     def set_session_status(self, text: str) -> None:
+        self.session_serial = getattr(self, "session_serial", 0) + 1
         if hasattr(self, "session_status"):
             self.session_status.set(text)
 
@@ -389,6 +390,8 @@ class MidiLinGui:
             self.validation_serial=token
             self.profile_check="checking"
         self.refresh_readiness()
+        if "systemctl" in command and SERVICE in command:
+            self.service_feedback = (token, getattr(self, "session_serial", 0))
         def worker()->None:
             code,text=execute_command(command)
             self.output.put(("command",token,command,code,"$ "+" ".join(command)+"\n"+text))
@@ -404,7 +407,7 @@ class MidiLinGui:
             if "--validate-config" in command and token==getattr(self, "validation_serial", 0):
                 self.profile_check="valid" if code==0 else "failed"
                 self.refresh_next_action()
-            if "systemctl" in command and SERVICE in command:
+            if "systemctl" in command and SERVICE in command and getattr(self, "service_feedback", None) == (token, getattr(self, "session_serial", 0)):
                 self.set_session_status("Service request " + ("completed · see log" if code==0 else "failed · see log"))
             if token==self.command_serial:self.status.set("Check completed" if code==0 else "Check failed; see Monitor & runtime")
             return
