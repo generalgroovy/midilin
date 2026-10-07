@@ -65,6 +65,44 @@ def run():
                     assert widget.winfo_rooty() + widget.winfo_height() <= root.winfo_rooty() + root.winfo_height()
                 assert view.log.winfo_height() >= 150
                 capture("monitor-narrow.png")
+                # Link a real-widget synthetic input to offline routing, without
+                # switching tabs or claiming actions actually ran.
+                assert str(view.input_inspect_button.cget("state")) == "disabled"
+                current_process = object()
+                view.process = current_process
+                handle(("line", current_process, "device=f1 control=grid_1 kind=press value=127\n"))
+                assert view.last_input == ("f1", "grid_1", "press")
+                assert "f1.grid_1" in view.last_input_text.get()
+                assert view.book.select() == str(view.tabs["monitor"])
+                handle(("line", object(), "device=x1 control=play kind=press value=1\n"))
+                assert view.last_input == ("f1", "grid_1", "press")
+                root.update()
+                assert view.input_inspect_button.winfo_ismapped()
+                capture("last-input-narrow.png")
+                view.input_inspect_button.invoke()
+                observed = view.inspector
+                root.update()
+                assert observed.kind.get() == "press"
+                assert "Hold f1.shift" in observed.result.get("1.0", "end")
+                observed.held.set("f1.shift")
+                observed.try_button.invoke()
+                assert "Eligible" in observed.result.get("1.0", "end")
+                assert "grid_1" in observed.details.get("1.0", "end")
+                observed.geometry("790x640+10+10")
+                root.update()
+                x, y = observed.winfo_rootx(), observed.winfo_rooty()
+                ImageGrab.grab(bbox=(x, y, x + observed.winfo_width(), y + observed.winfo_height())).save(evidence / "last-input-inspector.png")
+                observed.destroy()
+                handle(("line", current_process, "device=f1 control=unmapped_control kind=release value=0\n"))
+                view.input_inspect_button.invoke()
+                root.update()
+                assert "has no mapping" in view.inspector.details.get("1.0", "end")
+                assert "No mappings" in view.inspector.result.get("1.0", "end")
+                view.inspector.destroy()
+                handle(("stopped", current_process, 0))
+                assert view.last_input == ("f1", "unmapped_control", "release")
+                view.clear_last_input()
+                assert str(view.input_inspect_button.cget("state")) == "disabled"
                 view.show_tab("mappings")
                 view.mapping_query.set("does-not-exist")
                 view.mapping_state.set("Disabled")

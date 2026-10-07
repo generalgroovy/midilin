@@ -55,13 +55,19 @@ def preview_text(report: dict[str, Any]) -> str:
 
 
 class MappingInspector(tk.Toplevel):
-    def __init__(self, parent: tk.Misc, config: dict[str, Any], index: int):
+    def __init__(self, parent: tk.Misc, config: dict[str, Any], index: int | None = None,
+                 event: tuple[str, str, str] | None = None):
         super().__init__(parent)
         self.title("Inspect mapping · offline")
         self.geometry("790x640")
         self.minsize(580, 480)
         self.config_snapshot = copy.deepcopy(config)
-        mapping = self.config_snapshot["mappings"][index]
+        if event is not None:
+            report = preview_event(self.config_snapshot, *event)
+            decisions = report["decisions"]
+            index = next((i for i, m, _ in decisions if m.get("kind") == event[2]), decisions[0][0] if decisions else None)
+        mapping = self.config_snapshot["mappings"][index] if index is not None else {"device": event[0], "control": event[1], "kind": event[2]}
+        self.unmapped_input = index is None
         self.mapping = mapping
         self.raw = tk.BooleanVar(value=False)
         self.columnconfigure(0, weight=1)
@@ -69,17 +75,17 @@ class MappingInspector(tk.Toplevel):
         self.rowconfigure(4, weight=1)
         heading = ttk.Frame(self, padding=10)
         heading.grid(sticky="ew")
-        ttk.Label(heading, text="Inspect, then try its routing without a controller.").pack(side="left")
+        ttk.Label(heading, text="Last received input · offline rehearsal. Set held controls below; they were not captured." if event else "Inspect, then try its routing without a controller.", wraplength=550).pack(side="left")
         ttk.Checkbutton(heading, text="Show JSON", variable=self.raw, command=self.show_details).pack(side="right")
         self.details = ScrolledText(self, height=9, wrap="word", font="TkFixedFont")
         self.details.grid(row=1, column=0, sticky="nsew", padx=10)
-        self._write(self.details, mapping_details(self.config_snapshot, mapping))
+        self.show_details()
         form = ttk.LabelFrame(self, text="Try an event · loaded profile snapshot", padding=8)
         form.grid(row=2, column=0, sticky="ew", padx=10, pady=8)
         form.columnconfigure(1, weight=1)
-        self.device = tk.StringVar(value=str(mapping.get("device", "f1")))
-        self.control = tk.StringVar(value=str(mapping.get("control", "")))
-        self.kind = tk.StringVar(value=str(mapping.get("kind", "press")))
+        self.device = tk.StringVar(value=event[0] if event else str(mapping.get("device", "f1")))
+        self.control = tk.StringVar(value=event[1] if event else str(mapping.get("control", "")))
+        self.kind = tk.StringVar(value=event[2] if event else str(mapping.get("kind", "press")))
         self.held = tk.StringVar(value="")
         self.profile = tk.StringVar(value=str(config.get("active_profile", "")))
         devices = sorted({str(m.get("device", "")) for m in config.get("mappings", []) if isinstance(m, dict)})
@@ -113,7 +119,8 @@ class MappingInspector(tk.Toplevel):
         widget.configure(state="disabled")
 
     def show_details(self) -> None:
-        self._write(self.details, mapping_details(self.config_snapshot, self.mapping, self.raw.get()))
+        prefix = "This received control has no mapping in the loaded profile.\n\n" if self.unmapped_input else ""
+        self._write(self.details, prefix + mapping_details(self.config_snapshot, self.mapping, self.raw.get()))
 
     def preview(self) -> None:
         try:

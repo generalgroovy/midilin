@@ -226,6 +226,39 @@ class MidiLinGui:
         else:
             self.start_monitor()
 
+    def build_input_link(self, parent: ttk.Frame) -> None:
+        self.last_input = None
+        self.last_input_text = tk.StringVar(value="No input received in this console session.")
+        row = ttk.Frame(parent)
+        row.pack(fill="x", pady=(0, 8))
+        self.input_inspect_button = ttk.Button(row, text="Inspect last input", state="disabled", command=self.inspect_last_input)
+        self.input_inspect_button.pack(side="right", padx=(8, 0))
+        ttk.Label(row, textvariable=self.last_input_text, wraplength=580).pack(side="left", fill="x", expand=True)
+
+    def clear_last_input(self) -> None:
+        self.last_input = None
+        if hasattr(self, "last_input_text"):
+            self.last_input_text.set("Waiting for input from this console process.")
+            self.input_inspect_button.configure(state="disabled")
+
+    def receive_input(self, match: re.Match) -> None:
+        device, control, kind, value = match.groups()
+        if kind not in {"press", "release", "relative", "absolute"}:
+            return
+        self.last_input = (device, control, kind)
+        if hasattr(self, "last_input_text"):
+            self.last_input_text.set(f"Last received: {device}.{control} · {kind} · value {value}")
+            self.input_inspect_button.configure(state="normal")
+
+    def inspect_last_input(self) -> None:
+        event = getattr(self, "last_input", None)
+        if event is None:
+            return
+        previous = getattr(self, "inspector", None)
+        if previous is not None and previous.winfo_exists():
+            previous.destroy()
+        self.inspector = MappingInspector(self.root, self.config, event=event)
+
     def set_session_status(self, text: str) -> None:
         self.session_serial = getattr(self, "session_serial", 0) + 1
         if hasattr(self, "session_status"):
@@ -338,6 +371,7 @@ class MidiLinGui:
             ttk.Button(active, text=label, command=lambda value=action: self.service(value)).pack(side="left", padx=(0, 6))
         ttk.Button(active, text="Service logs", command=lambda: self.run_external(["journalctl", "--user", "-u", SERVICE, "-n", "200", "--no-pager"])).pack(side="left")
         ttk.Label(parent, text="Monitoring temporarily pauses an active service. Stop monitor or close to restore it.", wraplength=800).pack(anchor="w", pady=(0, 8))
+        self.build_input_link(parent)
         log_frame = ttk.Frame(parent)
         log_frame.pack(fill="both", expand=True)
         self.log = tk.Text(log_frame, wrap="word", font=("Monospace", 9), state="disabled", height=8)
@@ -356,6 +390,7 @@ class MidiLinGui:
 
     def start_monitor(self)->None:
         self.show_tab("monitor")
+        self.clear_last_input()
         restore_previous=self.service_was_active
         try:
             self.stop_process(restart_service=False); self.service_was_active=restore_previous
@@ -416,7 +451,9 @@ class MidiLinGui:
         if item[0]=="stopped":
             self.process=None; self.set_session_status(f"Monitor ended (exit {value})" + (" · Stop monitor restores service" if getattr(self, "service_was_active", False) else " · mapped actions off")); self.status.set(f"Monitor stopped (exit {value})"); self.append(f"[monitor stopped: exit {value}]\n"); return
         self.append(value); match=EVENT_RE.search(value)
-        if match:self.canvas.flash(match.group(1),match.group(2))
+        if match:
+            self.receive_input(match)
+            self.canvas.flash(match.group(1),match.group(2))
 
     def drain(self)->None:
         try:
