@@ -24,12 +24,15 @@ def run():
         profile.write_text(json.dumps(data), encoding="utf-8")
         root = tk.Tk()
         root.withdraw()
+        callback_errors = []
+        root.report_callback_exception = lambda *error: callback_errors.append(str(error))
         try:
             with patch("subprocess.Popen", side_effect=AssertionError("UI launched a process")), patch("subprocess.run", side_effect=AssertionError("UI ran a command")):
                 view = gui.MidiLinGui(root, profile)
                 # Real widgets, synthetic completion messages: no controller/process activity.
                 from PIL import ImageGrab
-                root.geometry("1180x760+10+10")
+                width, height = min(1180, root.winfo_screenwidth() - 48), min(760, root.winfo_screenheight() - 100)
+                root.geometry(f"{width}x{height}+10+10")
                 root.deiconify()
                 root.update()
                 assert view.book.select() == str(view.tabs["mappings"])
@@ -152,7 +155,8 @@ def run():
                     error.assert_called_once()
                 assert root.winfo_exists()
                 assert load_config(profile)["display_controls"]["brightness"]["minimum_percent"] == 13
-                report = {"platform": sys.platform, "tk": str(root.tk.call("info", "patchlevel")), "checks": ["clear next readiness action", "diagnostic exit zero does not claim hardware", "inspection and active control separated", "narrow full window visibility", "recover both search filters", "mapping link focus", "scrollable controller diagram", "mapping search and stable indices", "layered preview", "full script details", "invalid event recovery", "visible inspector layout", "empty search recovery", "cancel reload and close", "save and discard reload", "invalid draft preserves profile", "no subprocess operations"]}
+                assert not callback_errors, callback_errors
+                report = {"platform": sys.platform, "full_window": [width, height], "narrow_window": [860, 620], "tk": str(root.tk.call("info", "patchlevel")), "checks": ["clear next readiness action", "diagnostic exit zero does not claim hardware", "inspection and active control separated", "narrow full window visibility", "recover both search filters", "mapping link focus", "scrollable controller diagram", "mapping search and stable indices", "layered preview", "full script details", "invalid event recovery", "visible inspector layout", "empty search recovery", "cancel reload and close", "save and discard reload", "invalid draft preserves profile", "no subprocess operations", "no Tk callback errors"]}
                 (evidence / "report.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
                 print(json.dumps(report))
         finally:

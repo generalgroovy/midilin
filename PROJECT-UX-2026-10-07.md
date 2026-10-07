@@ -8,13 +8,13 @@ Search now explains an empty result and **Clear filters** resets both query and 
 
 **Monitor & runtime** separates read-only inspection from applying mappings to the desktop. A persistent process line stays separate from transient diagnostic feedback. Successful device listing is labeled “Device check complete”, because an exit-zero command can still find no hardware. Diagnostic actions take users to their results; live display sliders retain their tab and focus. Monitor/runtime restoration and save/discard/cancel ownership are unchanged.
 
-The controller diagram now has horizontal and vertical scrollbars at smaller desktop sizes. The minimum window is 860×620; the native CI workflow checks this size and the normal 1180×760 view, including visible log, actions, recovery and keyboard focus.
+The controller diagram now has horizontal and vertical scrollbars at smaller desktop sizes. The minimum window is 860×620; the native CI workflow checks this size and the normal view (up to 1180×760, clamped to the screen), including visible log, actions, recovery and keyboard focus.
 
 ## Verification
 
 - Local: **43 behavior tests passed**, Python compilation and `git diff --check` passed.
 - Existing real-Tk CI workflow extended with next-action transitions, synthetic empty device results, visible controls at 860×620, filter recovery, mapping-link focus and scrollable diagram, retaining inspector and save/discard/cancel checks.
-- Native CI and independent review: pending candidate run/review. Screenshots and run URL will be recorded once available.
+- Initial native CI workflows passed on Linux and Windows, but screenshot inspection caught the Windows runner’s smaller desktop clipping a requested large window. Startup and screenshot dimensions now respect screen space; fresh CI and independent review pending.
 - No physical controller, driver, desktop action, service activation or human usability acceptance was performed. Tests use synthetic profile data and prohibit subprocess operations.
 
 ## Preserved boundaries

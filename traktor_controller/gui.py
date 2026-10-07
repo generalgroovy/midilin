@@ -132,7 +132,8 @@ class ControllerCanvas(tk.Canvas):
 
 class MidiLinGui:
     def __init__(self, root: tk.Tk, config_path: Path = DEFAULT_CONFIG):
-        self.root=root; self.root.title("MIDILIN Controller Console"); self.root.geometry("1180x760")
+        self.root=root; self.root.title("MIDILIN Controller Console")
+        self.root.geometry(f"{min(1180, self.root.winfo_screenwidth() - 48)}x{min(760, self.root.winfo_screenheight() - 100)}")
         self.config_path=config_path.expanduser().resolve(); self.config=load_config(self.config_path)
         self.process: subprocess.Popen[str] | None=None; self.service_was_active=False
         self.output: queue.Queue=queue.Queue(); self.bright_job=None; self.temp_job=None
@@ -362,7 +363,7 @@ class MidiLinGui:
             command=self.command()+["--monitor","--dry-run"]; self.append("$ "+" ".join(command)+"\n")
             process=subprocess.Popen(command,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,bufsize=1,env=os.environ.copy())
         except (OSError,subprocess.SubprocessError) as error:
-            self.status.set("Could not start; use Stop monitor to restore service" if self.service_was_active else "Could not start; see Monitoring"); self.append(f"Could not start: {error}\n"); self.set_session_status("Monitor could not start · use Stop monitor to restore a paused service"); return
+            self.status.set("Could not start; use Stop monitor to restore service" if self.service_was_active else "Could not start; see Monitor & runtime"); self.append(f"Could not start: {error}\n"); self.set_session_status("Monitor could not start · use Stop monitor to restore a paused service"); return
         self.process=process
         self.set_session_status("Read-only input running · mapped actions off" + (" · service resumes on Stop" if self.service_was_active else ""))
         threading.Thread(target=self.reader,args=(process,),daemon=True).start(); self.status.set("Read-only controller monitor")
