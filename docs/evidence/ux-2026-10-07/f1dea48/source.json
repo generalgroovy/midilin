@@ -1,0 +1,7 @@
+{
+  "repository": "midilin",
+  "runtime_sha": "f1dea48e78ce93cfdbb6df2ed06e907ca1ec1a55",
+  "ci_url": "https://github.com/generalgroovy/midilin/actions/runs/37602095224",
+  "behavior_tests": 45,
+  "source": "GitHub Actions native Tk artifact; synthetic profiles; no subprocess/hardware activation"
+}
