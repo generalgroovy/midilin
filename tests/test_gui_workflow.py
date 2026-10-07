@@ -51,10 +51,10 @@ class GuiWorkflowTests(unittest.TestCase):
         view.command_serial = 3; view.detection_serial = 2; view.status = Mock(); view.append = Mock(); view.refresh_readiness = Mock()
         view.handle_output(("command", 2, ["--list-devices"], 0, "F1 controller"))
         view.handle_output(("command", 1, ["--list-devices"], 1, "No device"))
-        assert view.detection == "Devices detected"
+        assert view.detection == "Device check complete"
         view.status.set.assert_not_called()
         view.handle_output(("command", 3, ["--validate-config"], 0, "Valid"))
-        assert view.detection == "Devices detected"
+        assert view.detection == "Device check complete"
         view.status.set.assert_called_with("Check completed")
 
 

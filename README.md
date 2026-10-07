@@ -36,15 +36,17 @@ systemctl --user restart traktor-system-controller.service
 
 ## Check and find controls
 
-The setup strip shows the loaded profile, enabled mapping count and last device-check result. Follow **Check saved profile → Detect devices → Monitor input**. Device detection is a point-in-time result; the monitor confirms subsequent input. Active runtime/service and display-test controls remain explicit.
+The console opens on **Mappings**, ready to explore without hardware. The setup strip shows the profile name, enabled mapping count and last device check. Its next-action button guides **Check saved profile → Detect devices → Monitor input**, with failures kept retryable. The full profile path is in **Display settings**.
 
-In **Mappings**, search by device, control, action, layer or state; filter Enabled/Disabled. Layer text distinguishes `requires` from `unless`. No matching rows reports **0 shown**; clearing the search restores the list. Search does not edit the profile.
+Search by device, control, action, layer or state; filter Enabled/Disabled. **Clear filters** resets both the search and state filter and returns focus to search. No matches explains how to recover. Search does not edit the profile.
+
+**Monitor & runtime** separates inspection (mapped actions off) from controls that apply mappings to your desktop. Its persistent process line stays separate from one-off diagnostic feedback. “Device check complete” means the command finished: review its list, then monitor actual input. It does not mean a controller was found or tested. Background state is not assumed at startup.
 
 Select a row and choose **Inspect / try event** (or press Enter). The inspector shows readable field labels (**Show JSON** exposes exact configuration syntax), the complete mapping, referenced script/model definition where present, and an offline routing rehearsal. Choose an event and enter held controls such as `f1.shift`; **Try event** explains which mappings are eligible and why others are blocked. Multiple eligible mappings are shown in configuration order. Search also finds numeric parameters and profile fields; the table scrolls in both directions.
 
 The inspector uses a snapshot of the loaded profile. Reopen it after reloading to inspect new configuration. It never opens controllers or runs mapped commands; it does not simulate action values, throttling, timing or hardware response. Linux aliases and the chosen profile are respected. Linux release mappings see a held control before it is released.
 
-One-off diagnostics report their exit code, time out after 20 seconds, and put details in Monitoring. Monitor startup service checks time out after 5 seconds. The log retains the latest 2,000 lines; restarting monitoring discards late output from the old child.
+One-off diagnostics report their exit code, time out after 20 seconds, and put details in Monitor & runtime. Monitor startup service checks time out after 5 seconds. The log retains the latest 2,000 lines; restarting monitoring discards late output from the old child.
 
 ## Use the console
 
