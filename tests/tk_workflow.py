@@ -92,6 +92,20 @@ def run():
                 root.update()
                 x, y = observed.winfo_rootx(), observed.winfo_rooty()
                 ImageGrab.grab(bbox=(x, y, x + observed.winfo_width(), y + observed.winfo_height())).save(evidence / "last-input-inspector.png")
+                observed.geometry("580x480+10+10")
+                root.update()
+                for widget in (observed.heading_label, observed.show_json, observed.details, observed.try_button, observed.result):
+                    assert widget.winfo_ismapped()
+                    assert widget.winfo_rootx() >= observed.winfo_rootx()
+                    assert widget.winfo_rootx() + widget.winfo_width() <= observed.winfo_rootx() + observed.winfo_width()
+                    assert widget.winfo_rooty() + widget.winfo_height() <= observed.winfo_rooty() + observed.winfo_height()
+                assert observed.result.winfo_height() > 40
+                observed.show_json.invoke()
+                assert '"control": "grid_1"' in observed.details.get("1.0", "end")
+                observed.show_json.invoke()
+                root.update()
+                x, y = observed.winfo_rootx(), observed.winfo_rooty()
+                ImageGrab.grab(bbox=(x, y, x + observed.winfo_width(), y + observed.winfo_height())).save(evidence / "last-input-inspector-minimum.png")
                 observed.destroy()
                 handle(("line", current_process, "device=f1 control=unmapped_control kind=release value=0\n"))
                 view.input_inspect_button.invoke()
@@ -195,6 +209,7 @@ def run():
                 assert load_config(profile)["display_controls"]["brightness"]["minimum_percent"] == 13
                 assert not callback_errors, callback_errors
                 report = {"platform": sys.platform, "full_window": [width, height], "narrow_window": [860, 620], "tk": str(root.tk.call("info", "patchlevel")), "checks": ["clear next readiness action", "diagnostic exit zero does not claim hardware", "inspection and active control separated", "narrow full window visibility", "recover both search filters", "mapping link focus", "scrollable controller diagram", "mapping search and stable indices", "layered preview", "full script details", "invalid event recovery", "visible inspector layout", "empty search recovery", "cancel reload and close", "save and discard reload", "invalid draft preserves profile", "no subprocess operations", "no Tk callback errors"]}
+                report["checks"].extend(["last-input stale-process guard", "received input to offline inspector", "unmapped input explanation", "580x480 inspector header and controls contained", "Show JSON at minimum inspector size"])
                 (evidence / "report.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
                 print(json.dumps(report))
         finally:
