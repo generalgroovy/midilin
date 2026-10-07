@@ -16,10 +16,16 @@ Baseline `2b1f1d5f7221776c94b1425e1c134d80b2cc630c` matched origin/main. Candida
 
 ## Validation
 
-Local `python -m unittest discover -s tests -v`: **48 tests passed**. Three added regressions cover current/stale/unrecognized events, stopped input retention, explicit offline-inspector arguments without subprocess activity or profile writes, clearing on new process and no-op before input. Python compilation and diff checks are part of the candidate gate.
+Local `python -m unittest discover -s tests -v`: **48 tests passed**. Three added regressions cover current/stale/unrecognized events, stopped input retention, explicit offline-inspector arguments without subprocess activity or profile writes, clearing on new process and no-op before input. Python compilation and diff checks passed.
 
-The existing target-platform Tk CI workflow now feeds synthetic events through the actual output handler, invokes the real button, checks mapped/layered and unmapped routing, rejects stale output and records the narrow monitor and input-inspector screenshots. All subprocess execution remains prohibited in that native workflow. Initial native CI and independent review are pending at this freeze.
+Final runtime `4f0f6aa728f40c77e123d836c8f8c52932500b78` passed [native CI 37614874167](https://github.com/generalgroovy/midilin/actions/runs/37614874167), including all 48 tests, configuration validation and the target-platform Tk workflow. The native journey feeds synthetic events through the actual output handler, invokes the real button, checks mapped/layered and unmapped routing and rejects stale output. All subprocess execution remains prohibited in that workflow, which reported zero Tk callback errors.
+
+The owner inspected the three complete final screenshots at [docs/evidence/ux-flow-2026-10-07/4f0f6aa](docs/evidence/ux-flow-2026-10-07/4f0f6aa): 860×620 monitor, 790×640 inspector and its 580×480 minimum. The received-input summary, explicit inspector action, Show JSON and Try event fit; long details and results retain their scroll areas. The native workflow checks widget containment and Show JSON activation at the minimum size. Receipt and screenshots are also in shared `ux-flow-2026-10-07/evidence/midilin-ci-final/`.
+
+Independent reviewer `flow_a` passed the final paired source, independently running the original full 48/60 suites and three focused cases per final runtime. The reviewer found that a fixed-width new header could crowd Show JSON at 580px. The correction reserves the checkbox width and wraps the header to the remaining space; expanded native CI verifies both platforms at 580×480. No outstanding source findings remain. Shared review: `ux-flow-2026-10-07/reviews/midi-review.md`.
 
 ## Release boundary
 
-Candidate only until independent source review and root's rendered acceptance pass. Intended source URL: <https://github.com/generalgroovy/midilin>. No physical MIDI, active desktop mapping, service activation, driver change, audible result or installer execution has been performed. Source and native-widget acceptance cannot establish those separate device outcomes.
+Root separately inspected the final Linux and Windows narrow monitor windows and minimum-size inspectors, accepted the visible controls/results/header and clear offline-action boundaries, and authorized normal main promotion. The source release consists of the reviewed runtime above plus evidence-only documentation. Source URL: <https://github.com/generalgroovy/midilin>. The shared machine release receipt records the exact final main SHA and source verification; no hosted deployment is applicable.
+
+No physical MIDI, active desktop mapping, service activation, driver change, audible result or installer execution has been performed. Source and native-widget acceptance cannot establish those separate device outcomes.

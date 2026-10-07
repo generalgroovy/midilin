@@ -1,0 +1,37 @@
+{
+  "platform": "linux",
+  "full_window": [
+    1180,
+    760
+  ],
+  "narrow_window": [
+    860,
+    620
+  ],
+  "tk": "8.6.14",
+  "checks": [
+    "clear next readiness action",
+    "diagnostic exit zero does not claim hardware",
+    "inspection and active control separated",
+    "narrow full window visibility",
+    "recover both search filters",
+    "mapping link focus",
+    "scrollable controller diagram",
+    "mapping search and stable indices",
+    "layered preview",
+    "full script details",
+    "invalid event recovery",
+    "visible inspector layout",
+    "empty search recovery",
+    "cancel reload and close",
+    "save and discard reload",
+    "invalid draft preserves profile",
+    "no subprocess operations",
+    "no Tk callback errors",
+    "last-input stale-process guard",
+    "received input to offline inspector",
+    "unmapped input explanation",
+    "580x480 inspector header and controls contained",
+    "Show JSON at minimum inspector size"
+  ]
+}
