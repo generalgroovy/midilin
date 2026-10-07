@@ -133,7 +133,6 @@ class ControllerCanvas(tk.Canvas):
 class MidiLinGui:
     def __init__(self, root: tk.Tk, config_path: Path = DEFAULT_CONFIG):
         self.root=root; self.root.title("MIDILIN Controller Console")
-        self.root.geometry(f"{min(1180, self.root.winfo_screenwidth() - 48)}x{min(760, self.root.winfo_screenheight() - 100)}")
         self.config_path=config_path.expanduser().resolve(); self.config=load_config(self.config_path)
         self.process: subprocess.Popen[str] | None=None; self.service_was_active=False
         self.output: queue.Queue=queue.Queue(); self.bright_job=None; self.temp_job=None
@@ -145,6 +144,7 @@ class MidiLinGui:
         ttk.Label(top,text="MIDILIN",font=("Sans",16,"bold")).pack(side="left")
         self.status=tk.StringVar(value="Ready"); ttk.Label(top,textvariable=self.status).pack(side="right")
         self.root.minsize(860, 620)
+        self.root.geometry(f"{min(1180, self.root.winfo_screenwidth() - 48)}x{min(760, self.root.winfo_screenheight() - 100)}")
         self.profile_check = "unchecked"
         self.validation_serial = 0
         setup = ttk.Frame(self.root, padding=(8, 0, 8, 8))

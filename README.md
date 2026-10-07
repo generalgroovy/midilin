@@ -51,9 +51,9 @@ One-off diagnostics report their exit code, time out after 20 seconds, and put d
 ## Use the console
 
 1. **Mappings** shows actions and modifier layers. **Validate** checks the selected configuration.
-2. **Monitoring → Detect devices** shows available controllers. **Read-only monitor** temporarily stops an active service and displays input without applying mapped actions.
+2. **Monitor & runtime → Detect devices** shows available controllers. **Read-only monitor** temporarily stops an active service and displays input without applying mapped actions.
 3. **Stop monitor**, or closing the console, resumes the service only if it was active when monitoring began. **Stop service** is the explicit control for leaving the background service stopped.
-4. **Display controls** configures brightness and color-temperature backends. The test sliders apply live changes. Save changes to the profile, then restart the service to reload them.
+4. **Display settings** configures brightness and color-temperature backends. The test sliders apply live changes. Save changes to the profile, then restart the service to reload them.
 
 Use a custom profile with `midilin-gui --config /path/to/config.json`. GUI diagnostics, monitoring and display commands use that resolved path. The **service controls still manage the installed default service**, whose profile is configured by its unit file; opening a custom GUI profile does not change the service definition.
 
