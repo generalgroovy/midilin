@@ -206,7 +206,7 @@ class MidiLinGui:
         elif check != "valid":
             label, hint, state = "Check saved profile", "Mappings can be inspected without a controller.", "normal"
             if check == "failed":
-                hint = "Fix the errors in Monitor & runtime, then check again."
+                hint = "See Monitor & runtime for errors; fix the file, then check again."
         elif self.detection == "Checking devices…":
             label, hint, state = "Detecting devices…", "Results appear in Monitor & runtime.", "disabled"
         elif self.detection != "Device check complete":
