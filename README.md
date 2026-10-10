@@ -2,12 +2,6 @@
 
 Use Traktor Kontrol F1 and X1 MK1 controls for Linux/Sway media, audio, display and window actions. A Tk console shows mappings, input activity and diagnostics. [MIDIWIN](https://github.com/generalgroovy/midiwin) is the Windows companion.
 
-## Engineering overview
-
-- **Input mapping:** configurable controller actions and modifier layers connect Traktor hardware to Linux/Sway desktop functions.
-- **Desktop integration:** media, display and window controls use explicit operating-system backends, with a systemd user service for background operation.
-- **Operational visibility:** the Tk console provides mapping inspection, configuration validation, read-only monitoring and controlled service handover.
-
 [Project overview](https://generalgroovy.web.app/apps/midilin-midiwin/) · [Python implementation](traktor_controller/) · [Tests](tests/)
 
 ![Controller layout](assets/layout-overview.svg)
@@ -36,7 +30,7 @@ systemctl --user restart traktor-system-controller.service
 
 ## Check and find controls
 
-The console opens on **Mappings**, ready to explore without hardware. The setup strip shows the profile name, enabled mapping count and last device check. Its next-action button guides **Check saved profile → Detect devices → Monitor input**, with failures kept retryable. The full profile path is in **Display settings**.
+The console opens on **Mappings**, ready to explore without hardware. The setup strip shows the profile name, enabled mapping count and last device check. Use the tabs to switch tools; the strip contains only the next setup action. Its next-action button guides **Check saved profile → Detect devices → Monitor input**, with failures kept retryable. The full profile path is in **Display settings**.
 
 Search by device, control, action, layer or state; filter Enabled/Disabled. **Clear filters** resets both the search and state filter and returns focus to search. No matches explains how to recover. Search does not edit the profile.
 
